@@ -9,7 +9,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-import texto
+import src.texto as texto
 import pickle
 from os import listdir, mkdir
 from os.path import isfile, isdir, join

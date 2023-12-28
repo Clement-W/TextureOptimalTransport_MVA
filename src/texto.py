@@ -4,9 +4,9 @@ import numpy as np
 import sklearn.mixture                # for EM
 from skimage.transform import resize
 from scipy.linalg import sqrtm
-from patch import *
-from gaussian_texture import *
-import semidiscrete_ot as sdot
+from src.patch import *
+from src.gaussian_texture import *
+import src.semidiscrete_ot as sdot
 import matplotlib.pyplot as plt
 import time
 
