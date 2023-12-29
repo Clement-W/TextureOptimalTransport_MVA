@@ -87,29 +87,29 @@ class model:
             Pbt = P.im2patch(synthbt)
             # Source measure
             if scale == nscales-1:
-                print(f'Estimate Gaussian model')
-                ind = np.zeros((msc,nsc))
-                ind[0:w,0:w] = 1
-                meanadsnp = mv[0:w,0:w,:].flatten()
-                covadsnp = get_covariance_adsn(t,ind)
-                R = sqrtm(covadsnp)   # Warning: should not have complex values!
-                R = np.real(R)
-                sample = lambda : meanadsnp[np.newaxis,:] + (R @ np.random.randn(P.pdim,1)).T
-                self.gauscov = R
-                # How to initiliaze GaussianMixture with given means/covariances?
-                # gmm = sklearn.mixture.GaussianMixture(reg_covar=0)
-                # gmm.sample = sample
-                # self.gmm.append(gmm) 
+                if(self.mode=="RANDOMPATCH"):
+                    sample = lambda: Pbt[np.random.randint(P.Np),:]
+                else:
+                    print(f'Estimate Gaussian model')
+                    ind = np.zeros((msc,nsc))
+                    ind[0:w,0:w] = 1
+                    meanadsnp = mv[0:w,0:w,:].flatten()
+                    covadsnp = get_covariance_adsn(t,ind)
+                    R = sqrtm(covadsnp)   # Warning: should not have complex values!
+                    R = np.real(R)
+                    sample = lambda : meanadsnp[np.newaxis,:] + (R @ np.random.randn(P.pdim,1)).T
+                    self.gauscov = R
             else:
                 print(f'Estimate Source GMM with {ngmm} components')
                 if(self.mode=="BASETEXTO"):
                     gmm = sklearn.mixture.GaussianMixture(n_components=ngmm).fit(Pbt) # spherical or full
                     sample = lambda : gmm.sample()[0]
+                    self.gmm.append(gmm)
                 elif(self.mode=="RANDOMPATCH"):
                     sample = lambda: Pbt[np.random.randint(P.Np),:]
                 else:
                     sample = None
-                self.gmm.append(gmm)
+                
                 
             # Target measure
             ntarget = min(P.Np, 1000)
@@ -137,7 +137,7 @@ class model:
             # Apply transport map to all patches
             Psynthsc,ind = sdot.map(Pbt,y,v)
 
-            # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chauqe méthode)
+            # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chaque méthode)
             # dist(Psynthsc,y) (distance wasterstein discret discret)
 
             synth = P.patch2im(Psynthsc)
