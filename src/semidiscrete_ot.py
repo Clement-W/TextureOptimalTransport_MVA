@@ -59,4 +59,5 @@ def map(x, y, v):
     r = -2 * x @ y.T - vt
     j = np.argmin(r, axis=1)
     Y = y[j, :]
-    return Y, j
+    cout = np.min(r, axis=1)
+    return Y, j,cout

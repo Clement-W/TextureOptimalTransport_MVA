@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import time
 
 class model:
-    def __init__(self,im0, w, nscales, ngmm, visu=False, s=1, niter=100000, C=1,mode="BASETEXTO"):
+    def __init__(self,im0, w, nscales, ngmm, visu=False, s=1, niter=100000, C=1,mode="BASETEXTO",recomp_weight=False):
         # Texture synthesis with patch optimal transport
         #  This function initializes the texture model.
         #  It computes all the model parameters from a given exemplar image.
@@ -57,6 +57,17 @@ class model:
         self.nu = []
         self.gmm = []
 
+
+        self.dist_X_TvX = []
+        self.dist_Z_R_Z = []
+        self.dist_X_R_Z = []
+
+        self.patches_before_transport = []
+        self.patches_after_transport = []
+        self.patches_after_recomp = []
+
+        self.couts = []
+        
         t0 = time.time()
               
         for scale in range(nscales-1, -1, -1):
@@ -135,16 +146,31 @@ class model:
             self.v.append(v)
             
             # Apply transport map to all patches
-            Psynthsc,ind = sdot.map(Pbt,y,v)
+            Psynthsc,ind,cout = sdot.map(Pbt,y,v)
+            if(recomp_weight==False):
+                cout=None
+
+            self.couts.append(cout)
 
             # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chaque méthode)
             # dist(Psynthsc,y) (distance wasterstein discret discret)
 
-            synth = P.patch2im(Psynthsc)
+            synth = P.patch2im(Psynthsc,cout)
+
+            self.dist_X_TvX.append(np.linalg.norm(Psynthsc - Pbt,axis=1).mean())
+            self.dist_Z_R_Z.append(np.linalg.norm(Psynthsc - P.im2patch(synth),axis=1).mean())
+            self.dist_X_R_Z.append(np.linalg.norm(Pbt - P.im2patch(synth),axis=1).mean())
+
+            self.patches_before_transport.append(Pbt)
+            self.patches_after_transport.append(Psynthsc)
+            self.patches_after_recomp.append(P.im2patch(synth))
+
+            # dist entre Psynthsc et Pbt
+            # dist entre Psynthsc et P.im2patch(synth)
             
             if scale > 0: # Upsample current synthesis
                 Psynth2 = y2[ind,:]
-                synthbt = P2.patch2im(Psynth2)
+                synthbt = P2.patch2im(Psynth2,cout)
             
             # Display
             if visu:
@@ -215,12 +241,12 @@ class model:
                 y2 = self.y2[ind]
             
             # Apply transport map to all patches
-            Psynthsc,ind = sdot.map(Pbt,y,v)
-            synth = P.patch2im(Psynthsc)
+            Psynthsc,ind,cout = sdot.map(Pbt,y,v)
+            synth = P.patch2im(Psynthsc,cout)
             
             if scale > 0: # Upsample current synthesis
                 Psynth2 = y2[ind,:]
-                synthbt = P2.patch2im(Psynth2)
+                synthbt = P2.patch2im(Psynth2,cout)
             
             # Display
             if visu:
