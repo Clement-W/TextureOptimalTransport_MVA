@@ -95,34 +95,33 @@ class patch:
         return u
 
 
-    # def patch2im(self, p):
-    #     m, n, nc = self.m, self.n, self.nc
-    #     px, py, pc = self.px, self.py, self.pc
-    #     pdim = self.pdim
+    def patch2im_median(self, p):
+        m, n, nc = self.m, self.n, self.nc
+        px, py, pc = self.px, self.py, self.pc
+        pdim = self.pdim
 
-    #     # Initialize a 3D list to store pixel values
-    #     # Each channel has a separate 2D list
-    #     pixel_values = [[[] for _ in range(n)] for _ in range(m)]
-    #     for c in range(nc):
-    #         pixel_values[c] = [[[] for _ in range(n)] for _ in range(m)]
+        # Initialize a 3D list to store pixel values
+        # Each channel has a separate 2D list
+        pixel_values = [[[] for _ in range(n)] for _ in range(m)]
+        for c in range(nc):
+            pixel_values[c] = [[[] for _ in range(n)] for _ in range(m)]
 
-    #     # Accumulate pixel values from each patch
-    #     for j in range(pdim):
-    #         for i in range(len(px[:, j])):
-    #             x, y, c = px[i, j], py[i, j], pc[i, j]
-    #             pixel_values[c][x][y].append(p[i, j])
+        # Accumulate pixel values from each patch
+        for j in range(pdim):
+            for i in range(len(px[:, j])):
+                x, y, c = px[i, j], py[i, j], pc[i, j]
+                pixel_values[c][x][y].append(p[i, j])
 
-    #     # Create an empty array for the final image
-    #     u = np.zeros((m, n, nc))
+        # Create an empty array for the final image
+        u = np.zeros((m, n, nc))
 
-    #     # Compute median for each pixel position in a vectorized way
-    #     for c in range(nc):
-    #         for i in range(m):
-    #             for j in range(n):
-    #                 if pixel_values[c][i][j]:
-    #                     u[i, j, c] = np.median(pixel_values[c][i][j])
-
-    #     return u
+        # Compute median for each pixel
+        for c in range(nc):
+            for i in range(m):
+                for j in range(n):
+                    if pixel_values[c][i][j]:
+                        u[i, j, c] = np.median(pixel_values[c][i][j])
+        return u
     
 
     # def patch2im(self, p, v=None):
