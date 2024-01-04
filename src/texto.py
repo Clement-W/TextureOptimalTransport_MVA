@@ -9,6 +9,8 @@ from src.gaussian_texture import *
 import src.semidiscrete_ot as sdot
 import matplotlib.pyplot as plt
 import time
+from src.affine_transport import *
+import ot
 
 class model:
     def __init__(self,im0, w, nscales, ngmm, visu=False, s=1, niter=100000, C=1,mode="BASETEXTO",recomp_weight=False,mediane=False):
@@ -30,7 +32,7 @@ class model:
         #
         # Output:
         # - texmodel: texture model
-        assert mode in ["BASETEXTO","RANDOMPATCH","NNPROJ"], "mode must be BASETEXTO, RANDOMPATCH or NNPROJ"
+        assert mode in ["BASETEXTO","RANDOMPATCH","NNPROJ","AFFINE"], "mode must be BASETEXTO, RANDOMPATCH, NNPROJ or AFFINE"
         
         m = im0.shape[0]
         n = im0.shape[1]
@@ -59,6 +61,7 @@ class model:
         self.y2 = []
         self.nu = []
         self.gmm = []
+        self.affine_apps = []
 
 
         self.dist_X_TvX = []
@@ -106,6 +109,8 @@ class model:
             if scale == nscales-1:
                 if(self.mode=="RANDOMPATCH"):
                     sample = lambda: Pbt[np.random.randint(P.Np),:]
+                elif(self.mode=="AFFINE"):
+                    pass
                 else:
                     print(f'Estimate Gaussian model')
                     ind = np.zeros((msc,nsc))
@@ -146,20 +151,42 @@ class model:
             print('Compute semi-discrete optimal transport')
             if(self.mode=="NNPROJ"):
                 v = 0
+                self.v.append(v)
+            elif(self.mode=="AFFINE"):
+                affine_app = affine_transport(Pbt,y)
+                self.affine_apps.append(affine_app)
             else:
                 v = sdot.asgd(sample,y,nu,self.niter,C)
+                self.v.append(v)
             
-            self.v.append(v)
+      
             
-            # Apply transport map to all patches
-            Psynthsc,ind,cout = sdot.map(Pbt,y,v)
-            if(self.recomp_weight==False):
-                cout=None
+            if(self.mode=="AFFINE"):
+                Pbt_transformed = np.array([affine_app(x) for x in Pbt])
+                # argmin(c(Pbt_transported,y))
+                # vt = - np.sum(y**2, axis=1)
+                # r = -2 * Pbt_transformed @ y.T - vt
+                # ind = np.argmin(r, axis=1)
+                # Psynthsc = y[ind, :]
+                # cout = np.min(r, axis=1)
+                Psynthsc,ind,cout = sdot.map(Pbt_transformed,y,0)
+            else:
+                # Apply transport map to all patches
+                Psynthsc,ind,cout = sdot.map(Pbt,y,v)
+                if(self.recomp_weight==False):
+                    cout=None
 
             self.couts.append(cout)
 
             # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chaque méthode)
             # dist(Psynthsc,y) (distance wasterstein discret discret)
+
+            # normalize distribution 
+            # sum_Psynthsc = np.sum(Psynthsc,axis=0)
+            # sum_y = np.sum(y,axis=0)
+            # M=ot.dist(Psynthsc/sum_Psynthsc,y/sum_y,metric='euclidean')
+            # W = ot.emd2(Psynthsc/sum_Psynthsc, y/sum_y, M)
+            # self.wasserstein.append(W)
 
             if(self.mediane):
                 synth = P.patch2im_median(Psynthsc)
@@ -248,14 +275,22 @@ class model:
             
             # Get transportation map
             y = self.y[ind]
-            v = self.v[ind]
+
             if scale>0:
                 y2 = self.y2[ind]
             
             # Apply transport map to all patches
-            Psynthsc,ind,cout = sdot.map(Pbt,y,v)
-            if(self.recomp_weight==False):
-                cout = None
+            if(self.mode=="AFFINE"):
+                affine_app = self.affine_apps[ind]
+                Pbt_transformed = np.array([affine_app(x) for x in Pbt])
+                # argmin(c(Pbt_transported,y))
+                Psynthsc,ind,cout = sdot.map(Pbt_transformed,y,0)
+            else:
+                v = self.v[ind]
+                # Apply transport map to all patches
+                Psynthsc,ind,cout = sdot.map(Pbt,y,v)
+                if(self.recomp_weight==False):
+                    cout=None
             
             if(self.mediane):
                 synth = P.patch2im_median(Psynthsc)
