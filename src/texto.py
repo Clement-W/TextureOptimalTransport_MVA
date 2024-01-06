@@ -73,6 +73,7 @@ class model:
         self.patches_after_recomp = []
 
         self.couts = []
+        self.wasserstein=[]
         
         t0 = time.time()
 
