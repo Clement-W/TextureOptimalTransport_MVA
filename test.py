@@ -12,30 +12,24 @@ from src.gaussian_texture import *
 import src.semidiscrete_ot as sdot
 
 
+mode="BASETEXTO"
+texture="ground1013_small"
 
 # Load input image
 im0 = np.double(plt.imread('TextureOptimalTransport_MVA/tex/Sdesign24.png'))
 m,n,nc=im0.shape
 
-import src.texto as texto
+for w in [3]:
+    print('\n')
+    print('-----------------------------------------')
+    print('----- Processing texture ', texture,' -------')
+    print('-----------------------------------------')
+    print('\n')
 
-w = 5
-nscales = 4
-ngmm = 4
-paramstr = '_w'+str(w)+'_nscales'+str(nscales)+'_ngmm'+str(ngmm)
-mode="RANDOMPATCH"
-name="Sdesign24"
-
-model = texto.model(im0, w, nscales, ngmm,mode=mode)
-
-modelname = f"{name}_{paramstr}_{mode}.pckl"
-# Save model in a file
-
-f = open("TextureOptimalTransport_MVA/models/"+modelname, 'wb')
-pickle.dump(model, f)
-f.close()
-
-
-synth = model.synthesize(512, 768)
-synth = np.clip(synth, 0, 1)
-matplotlib.image.imsave(f'TextureOptimalTransport_MVA/plots/synth_'+mode+'_w='+str(w)+'.png', synth)
+    model = texto.model(im0, w, 4, 4,mode=mode)
+    wasserstein_distance = model.wasserstein
+    print(f"Wasserstein Distances: {wasserstein_distance}")
+    np.save(f'wasserstein/wasserstein_{mode}_{texture}_{w}.npy', wasserstein_distance)
+    #synth = model.synthesize(512, 768)
+    #synth = np.clip(synth, 0, 1)
+    #matplotlib.image.imsave(f'synth_GMM_NNProj_Sdesign.png', synth)

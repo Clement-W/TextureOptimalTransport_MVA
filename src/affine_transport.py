@@ -18,12 +18,19 @@ def affine_transport(source_dist, target_dist):
     target_cov = np.cov(target_dist, rowvar=False)
 
     # Compute the square root of the target covariance matrix
-    sqrt_target_cov = sqrtm(target_cov)
+    sqrt_target_cov = np.real(sqrtm(target_cov))
 
     # Compute the transformation matrix A and the offset vector b
-    A = sqrt_target_cov @ sqrtm(np.linalg.inv(source_cov))
+    A = sqrt_target_cov @ np.real(sqrtm(np.linalg.inv(source_cov)))
     b = target_mean - A @ source_mean
 
     # Return a function that applies the affine transformation
-    return lambda x: A @ x + b
+    #return lambda x: A @ x + b
+    return np.real(A),np.real(b)
+
+
+def create_affine_transform(A, b):
+    def affine_transform(x):
+        return A @ x + b
+    return affine_transform
 
