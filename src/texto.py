@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import time
 from src.affine_transport import *
 import ot
+from src.utils import wasserstein_distance
 
 class model:
     def __init__(self,im0, w, nscales, ngmm, visu=False, s=1, niter=100000, C=1,mode="BASETEXTO",recomp_weight=False,mediane=False):
@@ -66,17 +67,17 @@ class model:
         self.gmm = []
         self.transform_params = []
 
-
+        # Storing for experiments
         self.dist_X_TvX = []
         self.dist_Z_R_Z = []
-        self.dist_X_R_Z = []
+        self.dist_Z_y = []
+        self.dist_R_Z_y = []
 
         self.patches_before_transport = []
         self.patches_after_transport = []
         self.patches_after_recomp = []
 
         self.couts = []
-        self.wasserstein=[]
 
         self.last_synthesis = None
         
@@ -170,12 +171,6 @@ class model:
             
             if(self.mode=="AFFINE"):
                 Pbt_transformed = np.array([affine_app(x) for x in Pbt])
-                # argmin(c(Pbt_transported,y))
-                # vt = - np.sum(y**2, axis=1)
-                # r = -2 * Pbt_transformed @ y.T - vt
-                # ind = np.argmin(r, axis=1)
-                # Psynthsc = y[ind, :]
-                # cout = np.min(r, axis=1)
                 Psynthsc,ind,cout = sdot.map(Pbt_transformed,y,0)
             else:
                 # Apply transport map to all patches
@@ -185,46 +180,20 @@ class model:
 
             self.couts.append(cout)
 
-            # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chaque méthode)
-            # dist(Psynthsc,y) (distance wasserstein discret discret)
-
-            #normalize distribution 
-            sum_Psynthsc = Psynthsc.sum(0)
-            sum_y = y.sum(0)
-            norm_Psynthsc = Psynthsc/sum_Psynthsc
-            norm_y = y/sum_y
-            M=ot.dist(norm_Psynthsc,norm_y)
-            M /= M.max()
-
-            shp_y=norm_y.shape[0]
-            shp_Psynthsc=norm_Psynthsc.shape[0]
-
-            weights_y=np.ones(shp_y)/shp_y
-            weights_Psynthsc=np.ones(shp_Psynthsc)/shp_Psynthsc
-            
-
-            W = ot.emd2(weights_Psynthsc, weights_y, M,numItermax=300000)
-            self.wasserstein.append(W)
-
             if(self.mediane):
                 synth = P.patch2im_median(Psynthsc)
             else:
                 synth = P.patch2im(Psynthsc,cout)
 
-            self.dist_X_TvX.append(self.wasserstein_distance(Psynthsc,y))
-            self.dist_Z_R_Z.append(self.wasserstein_distance(y,P.im2patch(synth)))
-            #self.dist_X_R_Z.append(self.wasserstein_distance(Pbt,P.im2patch(synth)))
-            #self.dist_X_TvX.append(np.linalg.norm(Psynthsc - Pbt,axis=1).mean())
-            #self.dist_Z_R_Z.append(np.linalg.norm(Psynthsc - P.im2patch(synth),axis=1).mean())
-            #self.dist_X_R_Z.append(np.linalg.norm(Pbt - P.im2patch(synth),axis=1).mean())
-
+            self.dist_Z_y.append(wasserstein_distance(Psynthsc,y))
+            self.dist_R_Z_y.append(wasserstein_distance(y,P.im2patch(synth)))
+            self.dist_X_TvX.append(np.linalg.norm(Psynthsc - Pbt,axis=1).mean())
+            self.dist_Z_R_Z.append(np.linalg.norm(Psynthsc - P.im2patch(synth),axis=1).mean())
+       
             self.patches_before_transport.append(Pbt)
             self.patches_after_transport.append(Psynthsc)
             self.patches_after_recomp.append(P.im2patch(synth))
 
-            # dist entre Psynthsc et Pbt
-            # dist entre Psynthsc et P.im2patch(synth)
-            
             if scale > 0: # Upsample current synthesis
                 Psynth2 = y2[ind,:]
                 if(self.mediane):
@@ -251,21 +220,7 @@ class model:
         elapsed_time = time.time()-t0 
         print("Elapsed time : ", elapsed_time, ' seconds')
    
-    def wasserstein_distance(self,a,b):
-        sum_a = a.sum(0)
-        sum_b = b.sum(0)
-        norm_a = a/sum_a
-        norm_b = b/sum_b
-        M=ot.dist(norm_a,norm_b)
-        M /= M.max()
 
-        shp_a=norm_a.shape[0]
-        shp_b=norm_b.shape[0]
-
-        weights_a=np.ones(shp_a)/shp_a
-        weights_b=np.ones(shp_b)/shp_b
-
-        return ot.emd2(weights_a, weights_b, M,numItermax=500000)
 
 
     def synthesize(self, m, n, visu=False):
