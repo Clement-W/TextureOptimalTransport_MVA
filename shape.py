@@ -13,7 +13,7 @@ def get_image_shapes(folder_path):
 
     return image_shapes
 
-folder_path = "tex"
+folder_path = "TextureOptimalTransport_MVA/tex"
 image_shapes = get_image_shapes(folder_path)
 
 for filename, shape in image_shapes.items():

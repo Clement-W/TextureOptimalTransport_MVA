@@ -61,7 +61,7 @@ class model:
         self.y2 = []
         self.nu = []
         self.gmm = []
-        self.affine_apps = []
+        self.transform_params = []
 
 
         self.dist_X_TvX = []
@@ -73,6 +73,7 @@ class model:
         self.patches_after_recomp = []
 
         self.couts = []
+        self.wasserstein=[]
         
         t0 = time.time()
 
@@ -153,8 +154,9 @@ class model:
                 v = 0
                 self.v.append(v)
             elif(self.mode=="AFFINE"):
-                affine_app = affine_transport(Pbt,y)
-                self.affine_apps.append(affine_app)
+                A,b = affine_transport(Pbt,y)
+                self.transform_params.append((A,b))
+                affine_app = lambda x: A @ x + b
             else:
                 v = sdot.asgd(sample,y,nu,self.niter,C)
                 self.v.append(v)
@@ -179,23 +181,37 @@ class model:
             self.couts.append(cout)
 
             # piste 2.3 : on regarde distance de transport entre y et Psynthsc (à faire pour chaque méthode)
-            # dist(Psynthsc,y) (distance wasterstein discret discret)
+            # dist(Psynthsc,y) (distance wasserstein discret discret)
 
-            # normalize distribution 
-            # sum_Psynthsc = np.sum(Psynthsc,axis=0)
-            # sum_y = np.sum(y,axis=0)
-            # M=ot.dist(Psynthsc/sum_Psynthsc,y/sum_y,metric='euclidean')
-            # W = ot.emd2(Psynthsc/sum_Psynthsc, y/sum_y, M)
-            # self.wasserstein.append(W)
+            #normalize distribution 
+            sum_Psynthsc = Psynthsc.sum(0)
+            sum_y = y.sum(0)
+            norm_Psynthsc = Psynthsc/sum_Psynthsc
+            norm_y = y/sum_y
+            M=ot.dist(norm_Psynthsc,norm_y)
+            M /= M.max()
+
+            shp_y=norm_y.shape[0]
+            shp_Psynthsc=norm_Psynthsc.shape[0]
+
+            weights_y=np.ones(shp_y)/shp_y
+            weights_Psynthsc=np.ones(shp_Psynthsc)/shp_Psynthsc
+            
+
+            W = ot.emd2(weights_Psynthsc, weights_y, M,numItermax=300000)
+            self.wasserstein.append(W)
 
             if(self.mediane):
                 synth = P.patch2im_median(Psynthsc)
             else:
                 synth = P.patch2im(Psynthsc,cout)
 
-            self.dist_X_TvX.append(np.linalg.norm(Psynthsc - Pbt,axis=1).mean())
-            self.dist_Z_R_Z.append(np.linalg.norm(Psynthsc - P.im2patch(synth),axis=1).mean())
-            self.dist_X_R_Z.append(np.linalg.norm(Pbt - P.im2patch(synth),axis=1).mean())
+            self.dist_X_TvX.append(self.wasserstein_distance(Psynthsc,y))
+            self.dist_Z_R_Z.append(self.wasserstein_distance(y,P.im2patch(synth)))
+            #self.dist_X_R_Z.append(self.wasserstein_distance(Pbt,P.im2patch(synth)))
+            #self.dist_X_TvX.append(np.linalg.norm(Psynthsc - Pbt,axis=1).mean())
+            #self.dist_Z_R_Z.append(np.linalg.norm(Psynthsc - P.im2patch(synth),axis=1).mean())
+            #self.dist_X_R_Z.append(np.linalg.norm(Pbt - P.im2patch(synth),axis=1).mean())
 
             self.patches_before_transport.append(Pbt)
             self.patches_after_transport.append(Psynthsc)
@@ -230,7 +246,23 @@ class model:
         elapsed_time = time.time()-t0 
         print("Elapsed time : ", elapsed_time, ' seconds')
    
-    
+    def wasserstein_distance(self,a,b):
+        sum_a = a.sum(0)
+        sum_b = b.sum(0)
+        norm_a = a/sum_a
+        norm_b = b/sum_b
+        M=ot.dist(norm_a,norm_b)
+        M /= M.max()
+
+        shp_a=norm_a.shape[0]
+        shp_b=norm_b.shape[0]
+
+        weights_a=np.ones(shp_a)/shp_a
+        weights_b=np.ones(shp_b)/shp_b
+
+        return ot.emd2(weights_a, weights_b, M,numItermax=500000)
+
+
     def synthesize(self, m, n, visu=False):
         # Texture synthesis with patch optimal transport
         #  This function allows to synthesize the texture model.
@@ -281,7 +313,8 @@ class model:
             
             # Apply transport map to all patches
             if(self.mode=="AFFINE"):
-                affine_app = self.affine_apps[ind]
+                A,b = self.transform_params[ind]
+                affine_app = lambda x: A @ x + b
                 Pbt_transformed = np.array([affine_app(x) for x in Pbt])
                 # argmin(c(Pbt_transported,y))
                 Psynthsc,ind,cout = sdot.map(Pbt_transformed,y,0)
