@@ -7,6 +7,11 @@
 
 """
 
+"""
+Used for benchmarking in the project (2023)
+It was run on a server as these computations takes a very long time
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import src.texto as texto
