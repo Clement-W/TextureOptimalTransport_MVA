@@ -77,6 +77,8 @@ class model:
 
         self.couts = []
         self.wasserstein=[]
+
+        self.last_synthesis = None
         
         t0 = time.time()
 
@@ -349,6 +351,7 @@ class model:
                 plt.axis('off')
                 plt.pause(0.1)
         
+        self.last_synthesis = synth
         elapsed_time = time.time()-t0 
         print("Elapsed time : ", elapsed_time, ' seconds')
         
