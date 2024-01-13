@@ -9,7 +9,7 @@ def affine_transport(source_dist, target_dist):
     :param source_cov: Covariance matrix of the source Gaussian distribution.
     :param target_mean: Mean of the target Gaussian distribution.
     :param target_cov: Covariance matrix of the target Gaussian distribution.
-    :return: A function that applies the affine transport to a data point.
+    :return: The transformation matrix A and the offset vector b.
     """
     
     source_mean = np.mean(source_dist, axis=0)
@@ -24,8 +24,6 @@ def affine_transport(source_dist, target_dist):
     A = sqrt_target_cov @ np.real(sqrtm(np.linalg.inv(source_cov)))
     b = target_mean - A @ source_mean
 
-    # Return a function that applies the affine transformation
-    #return lambda x: A @ x + b
     return np.real(A),np.real(b)
 
 

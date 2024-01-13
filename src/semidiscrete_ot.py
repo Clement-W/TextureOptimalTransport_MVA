@@ -1,4 +1,3 @@
-
 # Copyright Arthur Leclaire (c), 2019.
 
 import numpy as np
@@ -53,8 +52,6 @@ def map(x, y, v):
     # - j: corresponding indices (chosen samples in y)
     #
     # NB: we use c(x,y) = |x-y|^2 as cost function
-    
-    #TODO: mettre la formule 3 du papier
     vt = v - np.sum(y**2, axis=1)
     r = -2 * x @ y.T - vt
     j = np.argmin(r, axis=1)

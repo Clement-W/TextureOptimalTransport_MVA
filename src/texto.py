@@ -1,4 +1,7 @@
 #  Copyright Arthur Leclaire (c), 2019.
+#  https://plmlab.math.cnrs.fr/aleclaire/texto
+
+#  Modified by Clément Weinreich and Paul-Henri Pinart in 2023
 
 import numpy as np
 import sklearn.mixture                # for EM
