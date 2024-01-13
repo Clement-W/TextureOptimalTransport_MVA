@@ -6,12 +6,9 @@ from src.patch import *
 #list files in models folder
 files = os.listdir('TextureOptimalTransport_MVA/models')
 
-
 for file in files:
     if(file.endswith('.pckl')):
-        
-
-        
+                
         print(file)
         f = open('TextureOptimalTransport_MVA/models/' + file, 'rb')
         # get name of the imgae from file
@@ -24,7 +21,6 @@ for file in files:
             m,n,nc=im0.shape
             model = pickle.load(f)
             f.close()
-
             # extract last synthesis
             last_synthesis_patches = model.patches_after_transport[-1]
             w=int(file[6])
